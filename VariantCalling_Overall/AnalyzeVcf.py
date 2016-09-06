@@ -9,6 +9,9 @@ tags = sys.argv[3]
 append = sys.argv[4] == "1"
 splittags = tags.split(",")
 
+if not os.path.exists(outpath) or not os.path.getsize(outpath) > 0:
+    append = False
+
 # Define functions
 def VariantType(ref,alt):
     if len(ref) > 1 and len(alt) > 1:
@@ -39,7 +42,7 @@ for line in lines:
     ref = splitline[3]
     alt = splitline[4]
     filters = splitline[6]
-    dp = int(splitline[7].split('=')[1])  # Assumes we only have DP, no annotation or anything
+    dp = int(splitline[7].split(';')[0].split('=')[1])  # Assumes we only have DP, no annotation or anything
 
     if alt == ".":
         continue
@@ -68,7 +71,9 @@ for line in lines:
     row = []
     for tag in splittags:
         row.append(tag)
-    reg_row = [chr,coord,ref,alt,VariantType(ref,alt),filters,dp,vf,gt_guess]
+    variant_key=chr+":"+str(coord)+"_"+ref+">"+alt
+
+    reg_row = [chr,coord,ref,alt,VariantType(ref,alt),filters,dp,vf,gt_guess,variant_key]
     for item in reg_row:
         row.append(item)
     datarows.append(row)
@@ -76,7 +81,7 @@ for line in lines:
 
 
 print lineCount
-print formatDict
+#print formatDict
 
 if append:
     writeType = 'a'
@@ -89,10 +94,18 @@ with open(outpath, writeType) as csvfile:
 
     for i in range(len(splittags)):
         header.append("tag"+str(i))
-    reg_header = ["chr","coord","ref","alt","type","filters","dp","vf","gt_guess"]
+    reg_header = ["chr","coord","ref","alt","type","filters","dp","vf","gt_guess","variant_key"]
     for head in reg_header:
         header.append(head)
     if not append:
         csvwriter.writerow(header)
+
+    if len(datarows) == 0:
+        emptyrow = []
+        for head in header:
+            emptyrow.append("None")
+        for tag in range(len(splittags)):
+            emptyrow[tag] = splittags[tag]
+        csvwriter.writerow(emptyrow)
     for row in datarows:
         csvwriter.writerow(row)
